@@ -34,27 +34,45 @@ exp_var = np.sum(np.square(v_1))
 
 
 # Function that computes the estimator of the variance in ML & LML :
-def estim_var_MLMC(N,M_0,M_1):
-    X1 = np.random.standard_normal((N,d,M_0))
-    X0 = np.random.standard_normal((N,d,M_1))
+def estim_var_MLMC(N, d, M_0, M_1, batch_size):
+    var_results = []
+    for i in range(0, N, batch_size):
+        actual_batch_size = min(batch_size, N - i)
+        X1 = np.random.standard_normal((actual_batch_size, d, M_0))
+        X0 = np.random.standard_normal((actual_batch_size, d, M_1))
 
-    #estimateur de la variance 
-    Y0_0_squared = f_vec_squared(X0,v_0)
-    Y1_0_squared = f_vec_squared(X1,v_0)
-    Y1_1_squared = f_vec_squared(X1,v_1)
-    Var_MLMC = np.mean(Y0_0_squared, axis=1) + np.mean(Y1_1_squared-Y1_0_squared, axis=1)
+        Y0_0_squared = f_vec_squared(X0, v_0)
+        Y1_0_squared = f_vec_squared(X1, v_0)
+        Y1_1_squared = f_vec_squared(X1, v_1)
+        Var_MLMC_batch = np.mean(Y0_0_squared, axis=1) + np.mean(Y1_1_squared - Y1_0_squared, axis=1)
+        
+        var_results.extend(Var_MLMC_batch)
 
-    return Var_MLMC
+        # Free memory
+        X1, X0 = None, None
+        np.get_default_memory_pool().free_all_blocks()
 
-def estim_var_MLMC_log(N,M_0,M_1):
-    X1 = np.random.standard_normal((N,d,M_0))
-    X0 = np.random.standard_normal((N,d,M_1))
+    return np.array(var_results)
 
-    Y0_0_squared = f_vec_squared(X0,v_0)
-    Y1_0_squared = f_vec_squared(X1,v_0)
-    Y1_1_squared = f_vec_squared(X1,v_1)
-    Var_MLMC_log = np.exp(np.log(np.mean(Y0_0_squared, axis=1)) + np.log(np.mean(Y1_1_squared, axis=1))-np.log(np.mean(Y1_0_squared, axis=1)))
-    return Var_MLMC_log
+def estim_var_MLMC_log(N, d, M_0, M_1, batch_size):
+    var_results = []
+    for i in range(0, N, batch_size):
+        actual_batch_size = min(batch_size, N - i)
+        X1 = np.random.standard_normal((actual_batch_size, d, M_0))
+        X0 = np.random.standard_normal((actual_batch_size, d, M_1))
+
+        Y0_0_squared = f_vec_squared(X0, v_0)
+        Y1_0_squared = f_vec_squared(X1, v_0)
+        Y1_1_squared = f_vec_squared(X1, v_1)
+        Var_MLMC_log_batch = np.exp(np.log(np.mean(Y0_0_squared, axis=1)) + np.log(np.mean(Y1_1_squared, axis=1))-np.log(np.mean(Y1_0_squared, axis=1)))
+    
+        var_results.extend(Var_MLMC_log_batch)
+
+        # Free memory if necessary
+        X1, X0 = None, None
+        np.get_default_memory_pool().free_all_blocks()
+
+    return np.array(var_results)
 
 
 # Function that computes the sample size of each level for a given budget eta
@@ -84,7 +102,7 @@ V_ell = np.array([V_0,V_1])
 C_ell = np.array([0.75,1.])  # Couts de nos estimateurs
 
 N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = npp.logspace(1,4,10)  # Budget qui varie entre 10^1 et 10^4 
+budget_eta = npp.logspace(1,6,10)  # Budget qui varie entre 10^1 et 10^4 
 
 bias_tab = []
 var_MLMC_tab = []
@@ -92,21 +110,45 @@ bias_log_tab = []
 var_MLMC_log_tab = []
 
 
+# Since we can't compute all at once due to M_0 and M_1 increasing, we need to separate the caluclations by computing batch_size first
+def get_max_batch_size(d, M_0, M_1, free_memory, memory_utilization=0.7):
+    """
+    Calculate the maximum batch size directly based on the memory usage per data sample and the available memory.
+    """
+    # Calculate the memory usage per sample
+    bytes_per_number = np.dtype('float32').itemsize
+    omega = (d+1) * bytes_per_number * (M_0 + M_1)  # Total memory used per sample
+
+    # Calculate the maximum amount of memory available for batches
+    max_memory_per_batch = free_memory * memory_utilization
+
+    # Calculate the maximum batch size that can fit within the memory limit
+    batch_size = int(max_memory_per_batch / omega)  # Use int to ensure we get a whole number
+
+    return batch_size
+
+
+# Get the current free memory on CUDA device
+free_memory = np.cuda.Device().mem_info[0]
+
 # Main loop
 
 for eta in tqdm(budget_eta):
     # Pour chaque budget eta, calcul de nos M_0 et M_1
     M_0,M_1 = map(int, M_ell_tab(eta,V_ell,C_ell))
+    
+    # Computing batch_size variable:
+    batch_size = get_max_batch_size(d, M_0, M_1, free_memory)
 
     # Calcul de nos tableaux de nos estimateurs de taille N
-    Tab_var_MLMC = estim_var_MLMC(N,M_0,M_1)
+    Tab_var_MLMC = estim_var_MLMC(N, d, M_0, M_1, batch_size)
     var_MLMC_tab.append(np.var(Tab_var_MLMC))
     bias_tab.append(np.square(np.mean(Tab_var_MLMC) - exp_var))
 
     Tab_var_MLMC = None
     np.get_default_memory_pool().free_all_blocks()
 
-    Tab_var_MLMC_log = estim_var_MLMC_log(N,M_0,M_1)
+    Tab_var_MLMC_log = estim_var_MLMC_log(N, d, M_0, M_1, batch_size)
     var_MLMC_log_tab.append(np.var(Tab_var_MLMC_log))
     bias_log_tab.append(np.square(np.mean(Tab_var_MLMC_log) - exp_var))
 
