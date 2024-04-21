@@ -14,6 +14,9 @@ np.fuse(npp.float32)
 
 from datetime import datetime
 
+import json
+import os 
+
 # Obtenir la date et l'heure actuelles
 now = datetime.now()
 date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
@@ -102,7 +105,7 @@ V_ell = np.array([V_0,V_1])
 C_ell = np.array([0.75,1.])  # Couts de nos estimateurs
 
 N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = npp.logspace(1,6,10)  # Budget qui varie entre 10^1 et 10^4 
+budget_eta = npp.logspace(1,8,12)  # Budget qui varie entre 10^1 et 10^4 
 
 bias_tab = []
 var_MLMC_tab = []
@@ -111,7 +114,7 @@ var_MLMC_log_tab = []
 
 
 # Since we can't compute all at once due to M_0 and M_1 increasing, we need to separate the caluclations by computing batch_size first
-def get_max_batch_size(d, M_0, M_1, free_memory, memory_utilization=0.7):
+def get_max_batch_size(d, M_0, M_1, free_memory, memory_utilization=0.8):
     """
     Calculate the maximum batch size directly based on the memory usage per data sample and the available memory.
     """
@@ -133,28 +136,71 @@ free_memory = np.cuda.Device().mem_info[0]
 
 # Main loop
 
-for eta in tqdm(budget_eta):
-    # Pour chaque budget eta, calcul de nos M_0 et M_1
-    M_0,M_1 = map(int, M_ell_tab(eta,V_ell,C_ell))
-    
-    # Computing batch_size variable:
-    batch_size = get_max_batch_size(d, M_0, M_1, free_memory)
+# Directory where the file will be saved
+directory = 'bias_figsave'
 
-    # Calcul de nos tableaux de nos estimateurs de taille N
-    Tab_var_MLMC = estim_var_MLMC(N, d, M_0, M_1, batch_size)
-    var_MLMC_tab.append(np.var(Tab_var_MLMC))
-    bias_tab.append(np.square(np.mean(Tab_var_MLMC) - exp_var))
+# Ensure the directory exists
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
-    Tab_var_MLMC = None
-    np.get_default_memory_pool().free_all_blocks()
+# Set the temporary filename within the specified directory
+temp_filename = os.path.join(directory, 'computation_progress_temp.json')
 
-    Tab_var_MLMC_log = estim_var_MLMC_log(N, d, M_0, M_1, batch_size)
-    var_MLMC_log_tab.append(np.var(Tab_var_MLMC_log))
-    bias_log_tab.append(np.square(np.mean(Tab_var_MLMC_log) - exp_var))
+# Open a file to save the progress
+with open(temp_filename, 'w') as file:
+    # Write headers or initial data structure setup if necessary
+    results = []
 
-    Tab_var_MLMC_log = None
-    np.get_default_memory_pool().free_all_blocks()
+    for eta in tqdm(budget_eta):
+        # Calculate M_0 and M_1 for the current budget
+        M_0, M_1 = map(int, M_ell_tab(eta, V_ell, C_ell))
 
+        # Compute the batch size
+        batch_size = get_max_batch_size(d, M_0, M_1, free_memory)
+        if batch_size == 0:
+            break  # Exit if batch size is too small
+
+        # Calculate estimators for MLMC
+        Tab_var_MLMC = estim_var_MLMC(N, d, M_0, M_1, batch_size)
+        var_MLMC = np.var(Tab_var_MLMC)
+        bias_MLMC = np.square(np.mean(Tab_var_MLMC) - exp_var)
+        var_MLMC_tab.append(var_MLMC)
+        bias_tab.append(bias_MLMC)
+
+        Tab_var_MLMC = None
+        np.get_default_memory_pool().free_all_blocks()
+
+        # Calculate estimators for MLMC log
+        Tab_var_MLMC_log = estim_var_MLMC_log(N, d, M_0, M_1, batch_size)
+        var_MLMC_log = np.var(Tab_var_MLMC_log)
+        bias_MLMC_log = np.square(np.mean(Tab_var_MLMC_log) - exp_var)
+        var_MLMC_log_tab.append(var_MLMC_log)
+        bias_log_tab.append(bias_MLMC_log)
+
+        Tab_var_MLMC_log = None
+        np.get_default_memory_pool().free_all_blocks()
+
+        # Append results to list and write to file
+        results.append({
+            "eta": eta,
+            "M_0": M_0,
+            "M_1": M_1,
+            "batch_size": batch_size,
+            "var_MLMC": var_MLMC.item(),
+            "bias_MLMC": bias_MLMC.item(),
+            "var_MLMC_log": var_MLMC_log.item(),
+            "bias_MLMC_log": bias_MLMC_log.item()
+        })
+        file.write(json.dumps(results[-1]) + "\n")  # Write the latest result as a new line in JSON format
+        file.flush()
+
+# After the loop, generate the new filename with datetime
+new_filename = f'computation_progress_{date_time}.json'
+
+# Rename the file
+os.rename(temp_filename, new_filename)
+
+# 
 var_MLMC_tab = [x.item() for x in var_MLMC_tab]
 bias_tab = [x.item() for x in bias_tab]
 
