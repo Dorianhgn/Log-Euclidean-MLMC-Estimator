@@ -104,8 +104,9 @@ V_1 = np.var(f_vec_squared(X,v_1) - f_vec_squared(X,v_0))
 V_ell = np.array([V_0,V_1])
 C_ell = np.array([0.75,1.])  # Couts de nos estimateurs
 
-N=500000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = npp.logspace(1,5,10)  # Budget qui varie entre 10^1 et 10^4 
+N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
+#budget_eta = npp.logspace(1,8,12)  # Budget qui varie entre 10^1 et 10^4 
+budget_eta = npp.logspace(8,8,1)
 
 bias_tab = []
 var_MLMC_tab = []
