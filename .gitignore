@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 bias_figsave/computation_progress_temp.json
+MSE/computation_progress
+MSE/MSE_Majoration_Cov.ipynb
