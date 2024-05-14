@@ -2,6 +2,8 @@
 Author: Dorian Hugonnet & Lise Pihan
 File: Script_Diag_Bias
 Objective: Plot the bias of the variance Multi-Level (ML) & Variance Log Multi Level (LML)
+
+Imcomplete.
 """
 
 # Lib imporation :
