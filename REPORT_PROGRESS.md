@@ -17,6 +17,7 @@ Contenu:
 
 - To do
 	- Check the syntax and the tense used
+	- 
 
 ## Solutions Proposées et Méthodologies
 ### Solutions Existantes
@@ -92,5 +93,5 @@ Contenu:
     Graphiques supplémentaires, codes utilisés pour les simulations, et tout autre matériel pertinent.
     Détails techniques des simulations et des méthodes utilisées.
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjM0MzA0MDE1XX0=
+eyJoaXN0b3J5IjpbLTQzNjE0Nzk1Nl19
 -->
