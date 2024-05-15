@@ -94,5 +94,5 @@ Contenu:
     Graphiques supplémentaires, codes utilisés pour les simulations, et tout autre matériel pertinent.
     Détails techniques des simulations et des méthodes utilisées.
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTQzNjE0Nzk1Nl19
+eyJoaXN0b3J5IjpbMTAzMzYwODc4NSwtNDM2MTQ3OTU2XX0=
 -->
