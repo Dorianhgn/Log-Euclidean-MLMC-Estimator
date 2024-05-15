@@ -6,14 +6,16 @@ Contenu:
     Présentation générale du sujet du rapport.
     Objectif de l'étude : analyser les estimations de matrices et gérer les valeurs négatives dans un contexte de Monte Carlo (T1: 0:00 - 0:12).
 
-- A faire :
-    - fezafez
-    - fezaf
+- To do :
+    - Modify the 3rd paragraph
+    - Modifiy the outline
  
 ## Contexte et Importance des Estimations Positives
 Contenu:
     Explication des problèmes liés aux estimations négatives et leur importance dans certaines applications (T1: 0:20 - 0:52).
     Discussion sur les valeurs positives et leur impact sur les matrices indéfinies (T1: 0:54 - 2:22).
+
+
 
 ## Solutions Proposées et Méthodologies
 ### Solutions Existantes
@@ -71,5 +73,5 @@ Contenu:
     Graphiques supplémentaires, codes utilisés pour les simulations, et tout autre matériel pertinent.
     Détails techniques des simulations et des méthodes utilisées.
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTQzODU2MjY4XX0=
+eyJoaXN0b3J5IjpbLTY4ODA0MTYxNV19
 -->
