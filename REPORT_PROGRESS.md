@@ -12,12 +12,13 @@ Contenu:
  
 ## Contexte et Importance des Estimations Positives
 Contenu:
+
     Explication des problèmes liés aux estimations négatives et leur importance dans certaines applications (T1: 0:20 - 0:52).
     Discussion sur les valeurs positives et leur impact sur les matrices indéfinies (T1: 0:54 - 2:22).
 
 - To do
 	- Check the syntax and the tense used
-	- 
+	- Add references and modify the text with \cite{...} instead of the name of references
 
 ## Solutions Proposées et Méthodologies
 ### Solutions Existantes
