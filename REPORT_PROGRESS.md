@@ -71,7 +71,7 @@ Contenu:
     - On veut : 
         - un graph du MSE (verif de la propriété expérimentalement)
         - un graph comparatif du bias avec des barres d'erreur correspondant au bias
-        - un graph comparatif du MSE $\mathbb E\left[(V_L- \mathbb E[V_L])^2\right]$
+        - un graph comparatif du MSE $\mathbb E\left[(V_L- \mathbb V)^2\right]$
 
 ## Discussion et Conclusion
 
@@ -98,6 +98,6 @@ Contenu:
     Graphiques supplémentaires, codes utilisés pour les simulations, et tout autre matériel pertinent.
     Détails techniques des simulations et des méthodes utilisées.
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTcyMzg5NDkxOSwxMDMzNjA4Nzg1LC00Mz
-YxNDc5NTZdfQ==
+eyJoaXN0b3J5IjpbMTk2OTc5NTQ3LC03MjM4OTQ5MTksMTAzMz
+YwODc4NSwtNDM2MTQ3OTU2XX0=
 -->
