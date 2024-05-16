@@ -38,8 +38,8 @@ d = 10 # lenght of random vectors
 # exp_var = cp.sum(cp.square(v_1))
 # C_ell = cp.array([0.75,1.])  # Couts de nos estimateurs
 
-N=100000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = np.logspace(1,4,10)  # Budget qui varie entre 10^1 et 10^4 
+N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
+budget_eta = np.logspace(1.5,5,10)  # Budget qui varie entre 10^1 et 10^4 
 
 v= cp.array([-0.00606533, -0.02837768, -0.20481078, -0.05524456,  0.00408442, -0.02378791, -0.11289296, -0.09047946, -0.0828985,   0.01015773]) # Real life
 v_0 = cp.array([-0.26251362, -0.22397083, -0.28459696, -0.14160629,  0.11507459,
@@ -52,7 +52,7 @@ v_3 = cp.array([ 0.00719622, -0.01367537, -0.04378771,  0.15642576,  0.03295938,
        -0.1364489 , -0.02709714, -0.16822205, -0.15617831, -0.05832736])
 
 v_array = [v_0, v_1, v_2, v_3]
-exp_var = cp.sum(cp.square(v))
+exp_var = cp.sum(cp.square(v_3))
 def expected_var(v):
     return cp.sum(cp.square(v))
 
@@ -140,9 +140,12 @@ for i in range(1,len(v_array)):
 V_ell = cp.array(V)
 
 bias_tab = []
+MSE_tab = []
 var_MLMC_tab = []
 bias_log_tab = []
+MSE_log_tab = []
 var_MLMC_log_tab = []
+MSE_log_euclidean_tab = []
 
 
 # Since we can't compute all at once due to M_0 and M_1 increasing, we need to separate the caluclations by computing batch_size first
@@ -194,9 +197,13 @@ with open(temp_filename, 'w') as file:
 
         # Calculate estimators for MLMC
         Tab_var_MLMC = estim_var_MLMC(N, d, M, batch_size)
+        # Compute the values we need
         var_MLMC = cp.var(Tab_var_MLMC)
-        bias_MLMC = cp.square(cp.mean(Tab_var_MLMC) - exp_var)
+        MSE_MLMC = cp.mean(cp.square(Tab_var_MLMC - exp_var))
+        bias_MLMC = cp.abs(cp.mean(Tab_var_MLMC) - exp_var)
+        # Add them in a array
         var_MLMC_tab.append(var_MLMC)
+        MSE_tab.append(MSE_MLMC)
         bias_tab.append(bias_MLMC)
 
         Tab_var_MLMC = None
@@ -204,10 +211,19 @@ with open(temp_filename, 'w') as file:
 
         # Calculate estimators for MLMC log
         Tab_var_MLMC_log = estim_var_MLMC_log(N, d, M, batch_size)
+        # Compute the values we need
         var_MLMC_log = cp.var(Tab_var_MLMC_log)
-        bias_MLMC_log = cp.square(cp.mean(Tab_var_MLMC_log) - exp_var)
+        MSE_MLMC_log = cp.mean(cp.square(Tab_var_MLMC_log - exp_var))
+        bias_MLMC_log = cp.abs(cp.mean(Tab_var_MLMC_log) - exp_var)
+
+        # Add them in a array
         var_MLMC_log_tab.append(var_MLMC_log)
+        MSE_log_tab.append(MSE_MLMC_log)
         bias_log_tab.append(bias_MLMC_log)
+        
+        #MSE in the log euclidean metric:
+        MSE_MLMC_log_euclidean = cp.mean(cp.square(cp.log(Tab_var_MLMC_log) - cp.log(exp_var)))
+        MSE_log_euclidean_tab.append(MSE_MLMC_log_euclidean)
 
         Tab_var_MLMC_log = None
         cp.get_default_memory_pool().free_all_blocks()
@@ -219,8 +235,11 @@ with open(temp_filename, 'w') as file:
             "batch_size": batch_size,
             "var_MLMC": var_MLMC.item(),
             "bias_MLMC": bias_MLMC.item(),
+            "MSE_MLMC": MSE_MLMC.item(),
             "var_MLMC_log": var_MLMC_log.item(),
-            "bias_MLMC_log": bias_MLMC_log.item()
+            "bias_MLMC_log": bias_MLMC_log.item(),
+            "MSE_MLMC_log": MSE_MLMC_log.item(),
+            "MSE_MLMC_log_euclidean": MSE_MLMC_log_euclidean.item()
         })
         file.write(json.dumps(results[-1]) + "\n")  # Write the latest result as a new line in JSON format
         file.flush()
@@ -231,14 +250,18 @@ new_filename = f'computation_progress_{date_time}.json'
 # Rename the file
 os.rename(temp_filename, new_filename)
 
-# 
+# getting the tab from cupy so it can be plotted
 var_MLMC_tab = [x.item() for x in var_MLMC_tab]
 bias_tab = [x.item() for x in bias_tab]
+MSE_tab = [x.item() for x in MSE_tab]
 
 var_MLMC_log_tab = [x.item() for x in var_MLMC_log_tab]
 bias_log_tab = [x.item() for x in bias_log_tab]
+MSE_log_tab = [x.item() for x in MSE_log_tab]
 
+MSE_log_euclidean_tab = [x.item() for x in MSE_log_euclidean_tab]
 
+"""
 # Plot log-log
 plt.figure(figsize=(10, 6))
 
@@ -266,4 +289,85 @@ plt.savefig(f'bias_figsave/graph_{date_time}.png')
 
 
 # Fermer la figure pour libérer la mémoire
-plt.close()
+plt.close()"""
+
+
+# Plot 1: MSE_log_euclidean_tab en fonction de budget_eta
+plt.figure(figsize=(10, 6))
+plt.loglog(budget_eta, MSE_log_euclidean_tab, marker='o')
+plt.xlabel('Budget $\eta$')
+plt.ylabel('MSE in the log-Euclidean metric of $\hat{V}^{LML}_4$')
+plt.title('MSE in the log-Euclidean metric as a function of budget $\eta$')
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+
+# Plot 2: Comparaison de MSE_tab et MSE_log_tab en fonction de budget_eta
+plt.figure(figsize=(10, 6))
+plt.loglog(budget_eta, MSE_tab, marker='o', label='MSE($\hat{V}^{ML}_4$)')
+plt.loglog(budget_eta, MSE_log_tab, marker='x', label='MSE($\hat{V}^{LML}_4$)')
+plt.xlabel('Budget $\eta$')
+plt.ylabel('MSE')
+plt.title('Comparaison of the MSE of estimators in the Euclidean metric as a function of budget $\eta$')
+plt.legend()
+plt.grid(True, which="both", ls="--")
+plt.show()
+
+# Plot 3: Comparaison de bias_tab et bias_log_tab avec des barres d'erreur
+# Calcul des barres d'erreur
+error_bars_tab = np.sqrt(var_MLMC_tab) / np.sqrt(N) 
+error_bars_log_tab = np.sqrt(var_MLMC_log_tab) / np.sqrt(N)
+
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Plot des biais en log-log
+ax1.plot(budget_eta, bias_tab, marker='o', label='bias($\hat{V}^{ML}_4$)', color='blue')
+ax1.plot(budget_eta, bias_log_tab, marker='x', label='bias($\hat{V}^{LML}_4$)', color='green')
+ax1.set_xlabel('Budget $\eta$')
+ax1.set_ylabel('Bias')
+ax1.set_title('Comparaison of the bias of estimators as a function of budget $\eta$')
+ax1.legend(loc='upper right')
+ax1.grid(True, which="both", ls="--")
+ax1.set_xscale('log')
+
+# Créer un deuxième axe Y pour les barres d'erreur
+ax2 = ax1.twinx()
+ax2.set_ylabel('Erreur')
+# Plot des barres d'erreur en échelle normale
+ax2.errorbar(budget_eta, bias_tab, yerr=error_bars_tab, fmt='x', color='red', alpha=0.5, label='standard deviation of $\hat{V}^{ML}_4$', capsize=5, elinewidth=1)
+ax2.errorbar(budget_eta, bias_log_tab, yerr=error_bars_log_tab, fmt='o', color='orange', alpha=0.5, label='standard deviation of $\hat{V}^{LML}_4$', capsize=5, elinewidth=1)
+
+ax2.set_xscale('log')
+# Ajuster les limites des axes pour qu'ils soient alignés
+ax2.set_ylim(ax1.get_ylim())
+ax2.set_xlim(ax1.get_xlim())
+ax2.legend(loc='center right')
+
+fig.tight_layout()
+plt.show()
+
+
+# Plot 4: Comparaison des variances de notre estimateur
+plt.figure(figsize=(10, 6))
+
+plt.loglog(budget_eta, var_MLMC_tab, marker='s', label='Var MLMC Tab')
+plt.loglog(budget_eta, var_MLMC_log_tab, marker='x', label='Var MLMC Log Tab')
+
+plt.title(f'Variance of estimators as a function of budget_eta for n={N}')
+plt.xlabel('Budget $\eta$')
+plt.ylabel('Var(estimator)')
+plt.legend()
+
+plt.grid(True, which="both", ls="--")
+
+plt.show()
+
+# Test
+fig, ax1 = plt.subplots(figsize=(10, 6))
+ax1.errorbar(budget_eta, bias_tab, yerr=(error_bars_tab), fmt='', color='red', alpha=0.5, label='Erreur Bias_tab', capsize=5, elinewidth=1)
+ax1.errorbar(budget_eta, bias_log_tab, yerr=(error_bars_log_tab), fmt='', color='orange', alpha=0.5, label='Erreur Bias_log_tab', capsize=5, elinewidth=1)
+ax1.set_yscale('log')
+ax1.set_xscale('log')
+ax1.grid(True, which="both", ls="--")
+
+plt.show()
