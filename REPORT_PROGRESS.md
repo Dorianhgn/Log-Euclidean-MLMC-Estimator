@@ -68,6 +68,10 @@ Contenu:
 
 - To do
 	- Check the syntax and the tense used
+    - On veut : 
+        - un graph du MSE (verif de la propriété expérimentalement)
+        - un graph comparatif du bias avec des barres d'erreur correspondant au bias
+        - un graph comparatif du MSE $\mathbb E\left[(V_L- \mathbb E[V_L])^2\right]$
 
 ## Discussion et Conclusion
 
