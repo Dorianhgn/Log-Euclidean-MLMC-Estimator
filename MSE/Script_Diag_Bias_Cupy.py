@@ -32,31 +32,32 @@ def f_vec_squared(X,v):
 d = 10 # lenght of random vectors
 
 # TRUCS A CHANGER
-# v_1= cp.array([-0.00606533, -0.02837768, -0.20481078, -0.05524456,  0.00408442, -0.02378791, -0.11289296, -0.09047946, -0.0828985,   0.01015773])
-# v_0 = cp.array([-0.04775578, -0.02158142, -0.22861181,  0.00999135 , 0.05261623, -0.03810132, -0.08892537, -0.09858141, -0.06851002,  0.09957945])
-# v_array = [v_0,v_1]
-# exp_var = cp.sum(cp.square(v_1))
-# C_ell = cp.array([0.75,1.])  # Couts de nos estimateurs
+
+v_1= cp.array([-0.00606533, -0.02837768, -0.20481078, -0.05524456,  0.00408442, -0.02378791, -0.11289296, -0.09047946, -0.0828985,   0.01015773])
+v_0 = cp.array([-0.04775578, -0.02158142, -0.22861181,  0.00999135 , 0.05261623, -0.03810132, -0.08892537, -0.09858141, -0.06851002,  0.09957945])
+v_array = [v_0,v_1]
+exp_var = cp.sum(cp.square(v_1))
+C_ell = cp.array([0.75,1.])  # Couts de nos estimateurs
 
 N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = np.logspace(1.5,5,10)  # Budget qui varie entre 10^1 et 10^4 
+budget_eta = np.logspace(1.5,6,10)  # Budget qui varie entre 10^1 et 10^4 
 
-v= cp.array([-0.00606533, -0.02837768, -0.20481078, -0.05524456,  0.00408442, -0.02378791, -0.11289296, -0.09047946, -0.0828985,   0.01015773]) # Real life
-v_0 = cp.array([-0.26251362, -0.22397083, -0.28459696, -0.14160629,  0.11507459,
-       -0.01314795,  0.00368215, -0.2233519 , -0.0494188 , -0.09833207])
-v_1 = cp.array([-0.09152057,  0.26501426, -0.26361748, -0.09584528,  0.07564258,
-       -0.28932995, -0.15172387, -0.17311338, -0.02250007, -0.02662765])
-v_2 = cp.array([ 0.02806491,  0.18164134, -0.02569311,  0.08406244,  0.09760685,
-       -0.2754576 , -0.18692242,  0.05429335, -0.05959692, -0.16104073])
-v_3 = cp.array([ 0.00719622, -0.01367537, -0.04378771,  0.15642576,  0.03295938,
-       -0.1364489 , -0.02709714, -0.16822205, -0.15617831, -0.05832736])
+# v= cp.array([-0.00606533, -0.02837768, -0.20481078, -0.05524456,  0.00408442, -0.02378791, -0.11289296, -0.09047946, -0.0828985,   0.01015773]) # Real life
+# v_0 = cp.array([-0.26251362, -0.22397083, -0.28459696, -0.14160629,  0.11507459,
+#        -0.01314795,  0.00368215, -0.2233519 , -0.0494188 , -0.09833207])
+# v_1 = cp.array([-0.09152057,  0.26501426, -0.26361748, -0.09584528,  0.07564258,
+#        -0.28932995, -0.15172387, -0.17311338, -0.02250007, -0.02662765])
+# v_2 = cp.array([ 0.02806491,  0.18164134, -0.02569311,  0.08406244,  0.09760685,
+#        -0.2754576 , -0.18692242,  0.05429335, -0.05959692, -0.16104073])
+# v_3 = cp.array([ 0.00719622, -0.01367537, -0.04378771,  0.15642576,  0.03295938,
+#        -0.1364489 , -0.02709714, -0.16822205, -0.15617831, -0.05832736])
 
-v_array = [v_0, v_1, v_2, v_3]
-exp_var = cp.sum(cp.square(v_3))
-def expected_var(v):
-    return cp.sum(cp.square(v))
+# v_array = [v_0, v_1, v_2, v_3]
+# exp_var = cp.sum(cp.square(v_3))
+# def expected_var(v):
+#     return cp.sum(cp.square(v))
 
-C_ell = cp.array([.25,0.5,0.75,1.])
+# C_ell = cp.array([.25,0.5,0.75,1.])
 
 # FIN DES TRUCS A CHANGER
 
@@ -68,15 +69,16 @@ def estim_var_MLMC(N, d, M, batch_size):
         actual_batch_size = min(batch_size, N - i)
         # Variance at level 0
         X_M_ell = cp.random.standard_normal((actual_batch_size,d,M[0]))
-        Y_ell_M_ell = f_vec(X_M_ell,v_0)
-        Var_MLMC_batch = cp.var(Y_ell_M_ell, axis=1, ddof=1)
-    
+        # Y_ell_M_ell = f_vec(X_M_ell,v_0)
+        Var_MLMC_batch = cp.var(f_vec(X_M_ell,v_0), axis=1, ddof=1)
+        X_M_ell = None
+        
         # Loop on M to have correction V^(ell)_{M_ell}(Y_ell) - V^(ell)_{M_ell}(Y_{ell-1})
         for ell in range(1,len(M)):
             X_M_ell = cp.random.standard_normal((actual_batch_size,d,M[ell]))
-            Y_ell_M_ell = f_vec(X_M_ell,v_array[ell])
-            Y_ell_minus_1_M_ell = f_vec(X_M_ell,v_array[ell-1])
-            Var_MLMC_batch += cp.var(Y_ell_M_ell, axis=1, ddof=1) - cp.var(Y_ell_minus_1_M_ell, axis=1, ddof=1)
+            # Y_ell_M_ell = f_vec(X_M_ell,v_array[ell])
+            # Y_ell_minus_1_M_ell = f_vec(X_M_ell,v_array[ell-1])
+            Var_MLMC_batch += cp.var(f_vec(X_M_ell,v_array[ell]), axis=1, ddof=1) - cp.var(f_vec(X_M_ell,v_array[ell-1]), axis=1, ddof=1)
 
         var_results.extend(Var_MLMC_batch)
 
@@ -92,15 +94,16 @@ def estim_var_MLMC_log(N, d, M, batch_size):
         actual_batch_size = min(batch_size, N - i)
         # Variance at level 0
         X_M_ell = cp.random.standard_normal((actual_batch_size,d,M[0]))
-        Y_ell_M_ell = f_vec(X_M_ell,v_0)
-        log_Var_log_MLMC = cp.log(cp.var(Y_ell_M_ell, axis=1, ddof=1))
-    
+        # Y_ell_M_ell = f_vec(X_M_ell,v_0)
+        log_Var_log_MLMC = cp.log(cp.var(f_vec(X_M_ell,v_0), axis=1, ddof=1))
+        X_M_ell = None
+
         # Loop on M to have correction V^(ell)_{M_ell}(Y_ell) - V^(ell)_{M_ell}(Y_{ell-1})
         for ell in range(1,len(M)):
             X_M_ell = cp.random.standard_normal((actual_batch_size,d,M[ell]))
-            Y_ell_M_ell = f_vec(X_M_ell,v_array[ell])
-            Y_ell_minus_1_M_ell = f_vec(X_M_ell,v_array[ell-1])
-            log_Var_log_MLMC += np.log(cp.var(Y_ell_M_ell, axis=1, ddof=1)) - cp.log(cp.var(Y_ell_minus_1_M_ell, axis=1, ddof=1))
+            # Y_ell_M_ell = f_vec(X_M_ell,v_array[ell])
+            # Y_ell_minus_1_M_ell = f_vec(X_M_ell,v_array[ell-1])
+            log_Var_log_MLMC += np.log(cp.var(f_vec(X_M_ell,v_array[ell]), axis=1, ddof=1)) - cp.log(cp.var(f_vec(X_M_ell,v_array[ell-1]), axis=1, ddof=1))
 
         Var_MLMC_log_batch = cp.exp(log_Var_log_MLMC)
     
@@ -192,7 +195,7 @@ with open(temp_filename, 'w') as file:
 
         # Compute the batch size
         batch_size = get_max_batch_size(d, M, free_memory)
-        if batch_size == 0:
+        if batch_size <= 3:
             break  # Exit if batch size is too small
 
         # Calculate estimators for MLMC
@@ -261,6 +264,15 @@ MSE_log_tab = [x.item() for x in MSE_log_tab]
 
 MSE_log_euclidean_tab = [x.item() for x in MSE_log_euclidean_tab]
 
+np.save('var_MLMC_tab',var_MLMC_tab)
+np.save('bias_tab',bias_tab)
+np.save('MSE_tab',MSE_tab)
+np.save('var_MLMC_log_tab',var_MLMC_log_tab)
+np.save('bias_log_tab',bias_log_tab)
+np.save('MSE_log_tab',MSE_log_tab)
+np.save('MSE_log_euclidean_tab',MSE_log_euclidean_tab)
+np.save('budget_eta', budget_eta)
+
 """
 # Plot log-log
 plt.figure(figsize=(10, 6))
@@ -315,8 +327,8 @@ plt.show()
 
 # Plot 3: Comparaison de bias_tab et bias_log_tab avec des barres d'erreur
 # Calcul des barres d'erreur
-error_bars_tab = np.sqrt(var_MLMC_tab) / np.sqrt(N) 
-error_bars_log_tab = np.sqrt(var_MLMC_log_tab) / np.sqrt(N)
+error_bars_tab = np.sqrt(var_MLMC_tab) # Mettre l'ecart type bootstrap
+error_bars_log_tab = np.sqrt(var_MLMC_log_tab) 
 
 fig, ax1 = plt.subplots(figsize=(10, 6))
 

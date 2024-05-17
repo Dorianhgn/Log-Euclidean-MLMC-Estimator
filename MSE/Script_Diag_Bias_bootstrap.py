@@ -124,7 +124,7 @@ def bootstrap_bias(var_samples, num_samples=10000):
     - num_samples: int, the number of bootstrap samples to generate
     
     Returns:
-    - numpy array, contening the bootstrap means
+    - tuple of 2 floats, contening the bootstrap mean and standard deviation
     """
     # Resampling with replacement to create bootstrap samples
     bootstrap_means = np.empty(num_samples)
@@ -134,11 +134,11 @@ def bootstrap_bias(var_samples, num_samples=10000):
         bootstrap_sample = var_samples[sample_indices] # For example, taking bootstrap_sample = var_samples[10], var_samples[1], var_samples[10], ..., var_samples[153] with lengh n
         bootstrap_means[i] = np.mean(bootstrap_sample) 
 
-    return np.mean(bootstrap_means), np.var(bootstrap_means)
+    return np.mean(bootstrap_means), np.std(bootstrap_means), bootstrap_means
 
 
 # Computation of our V_ell with N_pilote samples
-N_pilote = 10000
+N_pilote = 100000
 X = np.random.standard_normal((d,N_pilote))
 V_0 = np.var(f_vec_squared(X,v_0))
 V_1 = np.var(f_vec_squared(X,v_1) - f_vec_squared(X,v_0))
@@ -146,15 +146,18 @@ V_1 = np.var(f_vec_squared(X,v_1) - f_vec_squared(X,v_0))
 V_ell = np.array([V_0,V_1])
 C_ell = np.array([0.75,1.])  # Couts de nos estimateurs
 
-N=10000  # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
-budget_eta = npp.logspace(1,4,10)  # Budget qui varie entre 10^1 et 10^4 
+N=1000000 # On génère à chaque fois N estimations de nos variances V_ML et V_LML pour calculer leur variance et leur biais
+budget_eta = npp.logspace(1.3,4,10)  # Budget qui varie entre 10^1 et 10^4 
 
-mean_tab_final_val = []
-var_tab_final_val = []
+bias_tab_final_val = []
+std_tab_final_val = []
 var_MLMC_tab = []
-mean_log_tab_final_val = []
-var_log_tab_final_val = []
+bias_log_tab_final_val = []
+std_log_tab_final_val = []
 var_MLMC_log_tab = []
+
+bias_tab_boxplot = []
+bias_tab_log_boxplot = []
 
 # Get the current free memory on CUDA device
 free_memory = np.cuda.Device().mem_info[0]
@@ -190,9 +193,11 @@ with open(temp_filename, 'w') as file:
         var_MLMC = np.var(Tab_var_MLMC)
         var_MLMC_tab.append(var_MLMC)
         # Calculate the bootstrap bias and append it in the tab
-        Mean_MLMC_bootstrap, Var_MLMC_bootstrap = bootstrap_bias(Tab_var_MLMC)
-        mean_tab_final_val.append(Mean_MLMC_bootstrap)
-        var_tab_final_val.append(Var_MLMC_bootstrap)
+        Mean_MLMC_bootstrap, Std_MLMC_bootstrap, bootstrap_means_ML = bootstrap_bias(Tab_var_MLMC)
+        # bias_tab_final_val.append(Mean_MLMC_bootstrap - exp_var)
+        # std_tab_final_val.append(Std_MLMC_bootstrap)
+        bias_tab_boxplot.append(np.abs(bootstrap_means_ML-exp_var))
+
 
         Tab_var_MLMC = None
         np.get_default_memory_pool().free_all_blocks()
@@ -203,10 +208,10 @@ with open(temp_filename, 'w') as file:
         var_MLMC_log = np.var(Tab_var_MLMC_log)
         var_MLMC_log_tab.append(var_MLMC_log)
         # Calculate the bootstrap bias and append it in the tab
-        Mean_MLMC_log_bootstrap, Var_MLMC_log_bootstrap = bootstrap_bias(Tab_var_MLMC_log)
-        mean_log_tab_final_val.append(Mean_MLMC_log_bootstrap)
-        var_log_tab_final_val.append(Var_MLMC_log_bootstrap)
-
+        Mean_MLMC_log_bootstrap, Std_MLMC_log_bootstrap, bootstrap_means_LML = bootstrap_bias(Tab_var_MLMC_log)
+        # bias_log_tab_final_val.append(Mean_MLMC_log_bootstrap - exp_var)
+        # std_log_tab_final_val.append(Std_MLMC_log_bootstrap)
+        bias_tab_log_boxplot.append(np.abs(bootstrap_means_LML-exp_var))
 
         Tab_var_MLMC_log = None
         np.get_default_memory_pool().free_all_blocks()
@@ -229,40 +234,96 @@ new_filename = f'computation_progress_{date_time}.json'
 # Rename the file
 os.rename(temp_filename, new_filename)
 
-# 
-
-mean_tab_final_val= [x.item() for x in mean_tab_final_val]
-var_tab_final_val= [x.item() for x in var_tab_final_val]
-
-mean_log_tab_final_val= [x.item() for x in mean_log_tab_final_val]
-var_log_tab_final_val= [x.item() for x in var_log_tab_final_val]
 
 
-# Plot log-log
-plt.figure(figsize=(10, 6))
+# bias_tab_final_val = [x.item() for x in bias_tab_final_val]
+# std_tab_final_val= [x.item() for x in std_tab_final_val]
 
-# Plot des données
-#plt.loglog(budget_eta, mean_tab_final_val, marker='o', label='Biais carré Tab')
-plt.loglog(budget_eta, var_tab_final_val, marker='s', label='Var bootstrap samples')
-#plt.loglog(budget_eta, mean_log_tab_final_val, marker='^', label='Biais carré Log Tab', c='g')
-plt.loglog(budget_eta, var_log_tab_final_val, marker='x', label='Var bootstrap samples')
-
-# Ajouter titre et légendes
-plt.title(f'Graphique Log-Log pour n={N} using Bootstrap')
-plt.xlabel('Budget eta')
-plt.ylabel('Valeurs')
-plt.legend()
+# bias_log_tab_final_val= [x.item() for x in bias_log_tab_final_val]
+# std_log_tab_final_val= [x.item() for x in std_log_tab_final_val]
 
 
-# Configurer la grille
-plt.grid(True)
+bias_tab_boxplot = npp.array([np.asnumpy(x) for x in bias_tab_boxplot]).T
+bias_tab_log_boxplot = npp.array([np.asnumpy(x) for x in bias_tab_log_boxplot]).T
 
-# Afficher le plot
-#plt.show()
-
-# Sauvegarder le plot avec la date et l'heure dans le nom du fichier
-plt.savefig(f'bias_figsave/graph_boostrap_n={N}_{date_time}.png')
+npp.save('bootstrap_bias_savefile',bias_tab_boxplot)
+npp.save('bootstrap_bias_log_savefile',bias_tab_log_boxplot)
+npp.save('budget_eta', budget_eta)
 
 
-# Fermer la figure pour libérer la mémoire
-plt.close()
+# # Plot log-log
+# plt.figure(figsize=(10, 6))
+
+# # Plot des données
+# #plt.loglog(budget_eta, mean_tab_final_val, marker='o', label='Biais carré Tab')
+# plt.loglog(budget_eta, std_tab_final_val, marker='s', label='Var bootstrap samples')
+# #plt.loglog(budget_eta, mean_log_tab_final_val, marker='^', label='Biais carré Log Tab', c='g')
+# plt.loglog(budget_eta, std_log_tab_final_val, marker='x', label='Var bootstrap samples')
+
+# # Ajouter titre et légendes
+# plt.title(f'Graphique Log-Log pour n={N} using Bootstrap')
+# plt.xlabel('Budget eta')
+# plt.ylabel('Valeurs')
+# plt.legend()
+
+
+# # Configurer la grille
+# plt.grid(True)
+
+# # Afficher le plot
+# #plt.show()
+
+# # Sauvegarder le plot avec la date et l'heure dans le nom du fichier
+# plt.savefig(f'bias_figsave/graph_boostrap_n={N}_{date_time}.png')
+
+
+# # Fermer la figure pour libérer la mémoire
+# plt.close()
+
+# fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# # Plot des biais en log-log
+# ax1.loglog(budget_eta, npp.abs(bias_tab_final_val), marker='o', label='bias($\hat{V}^{ML}_4$)', color='blue')
+# ax1.loglog(budget_eta, npp.abs(bias_log_tab_final_val), marker='x', label='bias($\hat{V}^{LML}_4$)', color='green')
+# ax1.set_xlabel('Budget $\eta$')
+# ax1.set_ylabel('Bias')
+# ax1.set_title('Comparaison of the bias of estimators as a function of budget $\eta$')
+# ax1.legend(loc='upper right')
+# ax1.grid(True, which="both", ls="--")
+# ax1.set_xscale('log')
+
+# # Créer un deuxième axe Y pour les barres d'erreur
+# ax2 = ax1.twinx()
+# ax2.set_ylabel('Erreur')
+# # Plot des barres d'erreur en échelle normale
+# ax2.errorbar(budget_eta, npp.abs(bias_tab_final_val), yerr=std_tab_final_val, fmt='x', color='red', alpha=0.5, label='standard deviation of $\hat{V}^{ML}_4$', capsize=5, elinewidth=1)
+# ax2.errorbar(budget_eta, npp.abs(bias_log_tab_final_val), yerr=std_log_tab_final_val, fmt='o', color='orange', alpha=0.5, label='standard deviation of $\hat{V}^{LML}_4$', capsize=5, elinewidth=1)
+
+# ax2.set_yscale('log')
+# ax2.set_xscale('log')
+# # Ajuster les limites des axes pour qu'ils soient alignés
+# ax2.set_ylim(ax1.get_ylim())
+# ax2.set_xlim(ax1.get_xlim())
+# ax2.legend(loc='center right')
+
+# fig.tight_layout()
+# plt.show()
+
+# Boxplot
+fig, (ax1, ax2) = plt.subplots(1,2,figsize=(12, 6))
+
+
+ax1.boxplot(bias_tab_boxplot,positions=budget_eta, widths=(budget_eta*4)/budget_eta[0])
+ax2.boxplot(bias_tab_log_boxplot, positions=budget_eta, widths=(budget_eta*4)/budget_eta[0])
+
+ax1.set_xscale('log')
+ax1.set_yscale('log')
+
+ax2.set_xscale('log')
+ax2.set_yscale('log')
+
+fig.tight_layout()
+
+plt.show()
+
+print()
