@@ -1,16 +1,13 @@
 # Log-Euclidean-MLMC-Estimator
-Dans le cadre de notre projet d'initiation à la recherche en 4e année à l'INSA de Toulouse, nous avons étudié l'estimateur de la covariance en géométrie log-euclidienne
+As part of our research initiation project in the 4th year at INSA Toulouse, we studied the covariance estimator in log-Euclidean geometry.
 
-Lien du Overleaf : [https://www.overleaf.com/read/czjkdjgqjvbq#5bc002](https://www.overleaf.com/read/ndvjgrkdcmwz#29433a)
-
-
-L'environnement Python qui a été utilise pour faire tourner ces fichiers est dans `environment.yml`. Pour le créer avec conda, executez dans conda prompt ou powershell (si conda est dans les commandes de base de powershell) sous windows, ou directement depuis un terminal sous linux:
+The Python environment used to run these files is in `environment.yml`. To create it with conda, run in conda prompt or powershell (if conda is in the basic commands of powershell) under windows, or directly from a terminal under linux:
 
 ``` bash
 conda env create -f environment.yml
 ```
 
-Activez l'environnement crée en executant:
+Activate the created environment by running:
 
 ``` bash
 conda activate Projet4A
